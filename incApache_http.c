@@ -47,7 +47,11 @@ int get_new_UID(void)
      *** and reset UserTracker[retval] to 0.
      *** Be careful in order to avoid race conditions ***/
 /*** TO BE DONE 7.0 START ***/
-
+	//ask prof chiolas why this is implemented this way and if our implementations is correct 
+	pthread_mutex_lock(&cookie_mutex);
+	CurUID = (CurUID + 1) % MAX_COOKIES;
+	UserTracker[retval] = 0;
+	pthread_mutex_unlock(&cookie_mutex);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -64,6 +68,9 @@ int keep_track_of_UID(int myUID)
     /*** Increment UserTracker[myUID] and return the computed value.
      *** Be careful in order to avoid race conditions ***/
 /*** TO BE DONE 7.0 START ***/
+	pthread_mutex_lock(&cookie_mutex);
+	newcount = ++UserTracker[myUID];
+	pthread_mutex_unlock(&cookie_mutex);
 
 
 /*** TO BE DONE 7.0 END ***/
@@ -95,7 +102,7 @@ void send_response(int client_fd, int response_code, int cookie,
 
 	/*** Compute date of servicing current HTTP Request using a variant of gmtime() ***/
 /*** TO BE DONE 7.0 START ***/
-
+	now_tm = *gmtime(&now_t);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -129,6 +136,9 @@ void send_response(int client_fd, int response_code, int cookie,
 
 			/*** compute file_size and file_modification_time ***/
 /*** TO BE DONE 7.0 START ***/
+			file_size = stat_p->st_size;
+			file_modification_time = stat_p->st_mtime;
+			file_modification_tm = *gmtime(&file_modification_time);
 
 
 /*** TO BE DONE 7.0 END ***/
@@ -155,6 +165,14 @@ void send_response(int client_fd, int response_code, int cookie,
 
 			/*** compute file_size, mime_type, and file_modification_time of HTML_404 ***/
 /*** TO BE DONE 7.0 START ***/
+			if(stat(HTML_404, &stat_buffer)) {
+				debug("stat failed");
+				response_code = RESPONSE_CODE_INTERNAL_ERROR;
+				goto int_err;
+			}
+			file_size = stat_buffer.st_size;
+			file_modification_time = stat_buffer.st_mtime;
+			file_modification_tm = *gmtime(&file_modification_time);
 
 
 /*** TO BE DONE 7.0 END ***/
@@ -175,6 +193,13 @@ void send_response(int client_fd, int response_code, int cookie,
 
 			/*** compute file_size, mime_type, and file_modification_time of HTML_501 ***/
 /*** TO BE DONE 7.0 START ***/
+			if(stat(HTML_501, &stat_buffer)) {
+				debug("stat failed");
+				response_code = RESPONSE_CODE_INTERNAL_ERROR;
+				goto int_err;
+			}
+			file_size = stat_buffer.st_size;
+			file_modification_time = stat_buffer.st_mtime;
 
 
 /*** TO BE DONE 7.0 END ***/
@@ -187,7 +212,9 @@ void send_response(int client_fd, int response_code, int cookie,
         if ( cookie >= 0 ) {
             /*** set permanent cookie in order to identify this client ***/
 /*** TO BE DONE 7.0 START ***/
-
+			char* cookie_str = my_malloc(sizeof(char) * 100);
+			sprintf(cookie_str, "Set-Cookie: UID=%d%s\r\n", cookie, COOKIE_EXPIRE);
+			strcat(http_header, cookie_str);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -206,7 +233,8 @@ void send_response(int client_fd, int response_code, int cookie,
 		/*** compute time_as_string, corresponding to file_modification_time, in GMT standard format;
 		     see gmtime and strftime ***/
 /*** TO BE DONE 7.0 START ***/
-
+		file_modification_tm = *gmtime(&file_modification_time);
+		strftime(time_as_string, MAX_TIME_STR, "%a, %d %b %Y %T GMT", &file_modification_tm);
 
 /*** TO BE DONE 7.0 END ***/
 

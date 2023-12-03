@@ -77,8 +77,15 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	 *** no_free_threads, no_response_threads[conn_no], and
 	 *** connection_no[i] ***/
 /*** TO BE DONE 7.1 START ***/
-
-
+	for(i = 0; i < MAX_THREADS; ++i){
+		if(connection_no[i] == conn_no)
+			break;
+		if(pthread_join(thread_ids[i], NULL))
+			fail_errno("Could not join thread");
+		--no_response_threads[conn_no];
+		++no_free_threads;
+		connection_no[i] = FREE_SLOT;
+	}
 /*** TO BE DONE 7.1 END ***/
 
     }
@@ -179,9 +186,10 @@ char *get_mime_type(char *filename)
 		return my_strdup("text/css;");
 	debug("      ... get_mime_type(%s): was not .css\n", filename);
 
-	/*** What is missing here to avoid race conditions ? ***/
+	/*** What is missing here to avoid races conditions ? ***/
 /*** TO BE DONE 7.0 START ***/
-
+	pthread_mutex_lock(&mime_mutex);
+	debug("      ... get_mime_type(%s): locked mime_mutex\n", filename);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -193,6 +201,8 @@ char *get_mime_type(char *filename)
 
 	/*** What is missing here to avoid race conditions ? ***/
 /*** TO BE DONE 7.0 START ***/
+	pthread_mutex_unlock(&mime_mutex);
+	debug("      ... get_mime_type(%s): unlocked mime_mutex\n", filename);
 
 
 /*** TO BE DONE 7.0 END ***/
