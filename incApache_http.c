@@ -265,7 +265,9 @@ void send_response(int client_fd, int response_code, int cookie,
 
 		/*** send fd file on client_fd, then close fd; see syscall sendfile  ***/
 /*** TO BE DONE 7.0 START ***/
-
+		if(sendfile(client_fd, fd, NULL, file_size) == -1)
+			fail_errno("incApache: could not send file");
+		close(fd);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -324,6 +326,10 @@ void manage_http_requests(int client_fd
 		 *** filename, and protocol ***/
 /*** TO BE DONE 7.0 START ***/
 
+		//ask prof chiolas if we need to add an if to check if it is the first line
+		method_str = strtok_r(http_request_line, " ", &strtokr_save);
+		filename = strtok_r(NULL, " ", &strtokr_save);
+		protocol = strtok_r(NULL, "\r\n", &strtokr_save);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -363,6 +369,12 @@ void manage_http_requests(int client_fd
                                 /*** parse the cookie in order to get the UserID and count the number of requests coming from this client ***/
 /*** TO BE DONE 7.0 START ***/
 
+				//ask chiolas if there could be an error here 
+				char* cookie_str = strtok_r(NULL, "UserID=", &strtokr_save);
+				if(cookie_str != NULL) {
+					UIDcookie = atoi(cookie_str);
+				}
+
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -374,7 +386,11 @@ void manage_http_requests(int client_fd
                                  *** and store date in since_tm
                                  ***/
 /*** TO BE DONE 7.0 START ***/
-
+					if(strcmp(option_name, "If-Modified-Since") == 0) {
+						char* date_str = strtok_r(NULL, "\r\n", &strtokr_save);
+						strptime(date_str, "%a, %d %b %Y %T GMT", &since_tm);
+						http_method |= METHOD_CONDITIONAL;
+					}
 
 /*** TO BE DONE 7.0 END ***/
 
