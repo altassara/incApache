@@ -370,7 +370,17 @@ void manage_http_requests(int client_fd
 /*** TO BE DONE 7.0 START ***/
 
 				//ask chiolas if there could be an error here 
-				char* cookie_str = strtok_r(NULL, "UserID=", &strtokr_save);
+				char* cookie_str = strtok_r(NULL, ";", &strtokr_save);
+				if(cookie_str == NULL){
+					cookie_str = strtok_r(NULL, "\r\n", &strtokr_save);
+				}
+				while (*cookie_str) {
+					if (isdigit(*cookie_str)) {
+						printf("%c", *cookie_str);
+					}
+					cookie_str++;
+				}
+				
 				if(cookie_str != NULL) {
 					UIDcookie = atoi(cookie_str);
 				}
