@@ -369,18 +369,8 @@ void manage_http_requests(int client_fd
                                 /*** parse the cookie in order to get the UserID and count the number of requests coming from this client ***/
 /*** TO BE DONE 7.0 START ***/
 
-				//ask chiolas if there could be an error here 
-				char* cookie_str = strtok_r(NULL, ";", &strtokr_save);
-				if(cookie_str == NULL){
-					cookie_str = strtok_r(NULL, "\r\n", &strtokr_save);
-				}
-				while (*cookie_str) {
-					if (isdigit(*cookie_str)) {
-						printf("%c", *cookie_str);
-					}
-					cookie_str++;
-				}
-				
+				//ask chiolas if there could be an error here (probably not) 
+				char* cookie_str = strtok_r(NULL, "UserID=", &strtokr_save);
 				if(cookie_str != NULL) {
 					UIDcookie = atoi(cookie_str);
 				}
@@ -456,7 +446,11 @@ void manage_http_requests(int client_fd
 				 *** Use something like timegm() to convert from struct tm to time_t
 				 ***/
 /*** TO BE DONE 7.0 START ***/
-
+				time_t file_modification_time = stat_p->st_mtime;
+				time_t since_time = timegm(&since_tm);
+				if(since_time >= file_modification_time) {
+					http_method = METHOD_NOT_CHANGED;
+				}
 
 /*** TO BE DONE 7.0 END ***/
 
