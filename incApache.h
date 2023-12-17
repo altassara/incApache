@@ -111,7 +111,7 @@ extern void *client_connection_thread(void *vp);
 extern char *get_mime_type(char *filename);
 
 extern void send_response(int client_fd, int response_code, int cookie,
-#ifdef INCaPACHE_6_1
+#ifdef INCaPACHE_7_1
 			  int is_http1_0, int thread_no,
 #endif
 			  char *filename, struct stat *stat_p);

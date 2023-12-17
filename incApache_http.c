@@ -47,11 +47,12 @@ int get_new_UID(void)
      *** and reset UserTracker[retval] to 0.
      *** Be careful in order to avoid race conditions ***/
 /*** TO BE DONE 7.0 START ***/
-	//ask prof chiolas why this is implemented this way and if our implementations is correct 
-	pthread_mutex_lock(&cookie_mutex);
-	CurUID = (CurUID + 1) % MAX_COOKIES;
+	if(pthread_mutex_lock(&cookie_mutex))
+		fail_errno("incApache: could not lock cookie_mutex");
+	retval = (CurUID + 1) % MAX_COOKIES;
 	UserTracker[retval] = 0;
-	pthread_mutex_unlock(&cookie_mutex);
+	if(pthread_mutex_unlock(&cookie_mutex))
+		fail_errno("incApache: could not unlock cookie_mutex");
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -68,9 +69,11 @@ int keep_track_of_UID(int myUID)
     /*** Increment UserTracker[myUID] and return the computed value.
      *** Be careful in order to avoid race conditions ***/
 /*** TO BE DONE 7.0 START ***/
-	pthread_mutex_lock(&cookie_mutex);
+	if(pthread_mutex_lock(&cookie_mutex))
+		fail_errno("incApache: could not lock cookie_mutex");
 	newcount = ++UserTracker[myUID];
-	pthread_mutex_unlock(&cookie_mutex);
+	if(pthread_mutex_unlock(&cookie_mutex))
+		fail_errno("incApache: could not unlock cookie_mutex");
 
 
 /*** TO BE DONE 7.0 END ***/
@@ -102,7 +105,8 @@ void send_response(int client_fd, int response_code, int cookie,
 
 	/*** Compute date of servicing current HTTP Request using a variant of gmtime() ***/
 /*** TO BE DONE 7.0 START ***/
-	now_tm = *gmtime(&now_t);
+	if(gmtime_r(&now_t, &now_tm) == NULL)
+		fail_errno("incApache: could not get time");
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -138,8 +142,6 @@ void send_response(int client_fd, int response_code, int cookie,
 /*** TO BE DONE 7.0 START ***/
 			file_size = stat_p->st_size;
 			file_modification_time = stat_p->st_mtime;
-			file_modification_tm = *gmtime(&file_modification_time);
-
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -172,7 +174,6 @@ void send_response(int client_fd, int response_code, int cookie,
 			}
 			file_size = stat_buffer.st_size;
 			file_modification_time = stat_buffer.st_mtime;
-			file_modification_tm = *gmtime(&file_modification_time);
 
 
 /*** TO BE DONE 7.0 END ***/
@@ -212,9 +213,12 @@ void send_response(int client_fd, int response_code, int cookie,
         if ( cookie >= 0 ) {
             /*** set permanent cookie in order to identify this client ***/
 /*** TO BE DONE 7.0 START ***/
+
+			//ask probabilmente si puo rendere un po più corto
 			char* cookie_str = my_malloc(sizeof(char) * 100);
-			sprintf(cookie_str, "Set-Cookie: UID=%d%s\r\n", cookie, COOKIE_EXPIRE);
+			sprintf(cookie_str, "\r\nSet-Cookie: UID=%d%s", cookie, COOKIE_EXPIRE);
 			strcat(http_header, cookie_str);
+			free(cookie_str);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -233,7 +237,8 @@ void send_response(int client_fd, int response_code, int cookie,
 		/*** compute time_as_string, corresponding to file_modification_time, in GMT standard format;
 		     see gmtime and strftime ***/
 /*** TO BE DONE 7.0 START ***/
-		file_modification_tm = *gmtime(&file_modification_time);
+		if(gmtime_r(&file_modification_time, &file_modification_tm) == NULL)
+			fail_errno("incApache: could not get time");
 		strftime(time_as_string, MAX_TIME_STR, "%a, %d %b %Y %T GMT", &file_modification_tm);
 
 /*** TO BE DONE 7.0 END ***/
@@ -268,7 +273,6 @@ void send_response(int client_fd, int response_code, int cookie,
 		if(sendfile(client_fd, fd, NULL, file_size) == -1)
 			fail_errno("incApache: could not send file");
 		close(fd);
-
 /*** TO BE DONE 7.0 END ***/
 
 	}
@@ -370,9 +374,20 @@ void manage_http_requests(int client_fd
 /*** TO BE DONE 7.0 START ***/
 
 				//ask chiolas if there could be an error here (probably not) 
+				
+				/*debug("cookie_strPrima: %s\n", strtokr_save);
 				char* cookie_str = strtok_r(NULL, "UserID=", &strtokr_save);
 				if(cookie_str != NULL) {
+					debug("cookie_str: %s\n", cookie_str);
 					UIDcookie = atoi(cookie_str);
+				}*/
+				option_val = strtok_r(NULL, "=", &strtokr_save);
+				if (!strcmp(option_val, " UID")) {
+					char* aux;
+					option_val = strtok_r(NULL, "\r\n", &strtokr_save);
+					UIDcookie = strtol(option_val, &aux, 10);
+					if(aux == option_val || UIDcookie < 0 || UIDcookie > MAX_COOKIES - 1)
+						UIDcookie = -1;
 				}
 
 
@@ -389,7 +404,8 @@ void manage_http_requests(int client_fd
 					if(strcmp(option_name, "If-Modified-Since") == 0) {
 						char* date_str = strtok_r(NULL, "\r\n", &strtokr_save);
 						strptime(date_str, "%a, %d %b %Y %T GMT", &since_tm);
-						http_method |= METHOD_CONDITIONAL;
+						if(since_tm.tm_year != 0)
+							http_method |= METHOD_CONDITIONAL;
 					}
 
 /*** TO BE DONE 7.0 END ***/
@@ -447,9 +463,12 @@ void manage_http_requests(int client_fd
 				 ***/
 /*** TO BE DONE 7.0 START ***/
 				time_t file_modification_time = stat_p->st_mtime;
-				time_t since_time = timegm(&since_tm);
+				time_t since_time = my_timegm(&since_tm);
 				if(since_time >= file_modification_time) {
 					http_method = METHOD_NOT_CHANGED;
+				}
+				else{
+					http_method = http_method & ~METHOD_CONDITIONAL;
 				}
 
 /*** TO BE DONE 7.0 END ***/
