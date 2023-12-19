@@ -403,9 +403,10 @@ void manage_http_requests(int client_fd
 /*** TO BE DONE 7.0 START ***/
 					if(strcmp(option_name, "If-Modified-Since") == 0) {
 						char* date_str = strtok_r(NULL, "\r\n", &strtokr_save);
-						strptime(date_str, "%a, %d %b %Y %T GMT", &since_tm);
-						if(since_tm.tm_year != 0)
+						strptime(date_str, " %a, %d %b %Y %T GMT", &since_tm);
+						if(since_tm.tm_year != 0){
 							http_method |= METHOD_CONDITIONAL;
+						}
 					}
 
 /*** TO BE DONE 7.0 END ***/
@@ -486,7 +487,7 @@ void manage_http_requests(int client_fd
 				break;
 			case METHOD_NOT_CHANGED :
 				debug("    ... file %s not modified\n", filename);
-				free(stat_p);
+				//free(stat_p);
 				SEND_RESPONSE(client_fd, RESPONSE_CODE_NOT_MODIFIED, UIDcookie, /*** Not Modified, without body ***/
 #ifdef INCaPACHE_7_1
 					      is_http1_0, connection_no, thread_idx,

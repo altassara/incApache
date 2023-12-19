@@ -76,7 +76,8 @@ time_t my_timegm(struct tm *tm)
 
         /*** Guess what is missing here ... ***/
 /*** TO BE DONE 7.0 START ***/
-			pthread_mutex_lock(&my_timegm_mutex);
+			if(pthread_mutex_lock(&my_timegm_mutex) != 0)
+				fail_errno("incApache: could not lock cookie_mutex");
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -91,7 +92,8 @@ time_t my_timegm(struct tm *tm)
 
         /*** Guess what is missing here ... ***/
 /*** TO BE DONE 7.0 START ***/
-			pthread_mutex_unlock(&my_timegm_mutex);
+			if(pthread_mutex_unlock(&my_timegm_mutex) != 0)
+				fail_errno("incApache: could not unlock cookie_mutex");
 
 /*** TO BE DONE 7.0 END ***/
 
