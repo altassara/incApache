@@ -79,6 +79,8 @@ time_t my_timegm(struct tm *tm)
 			if(pthread_mutex_lock(&my_timegm_mutex) != 0)
 				fail_errno("incApache: could not lock cookie_mutex");
 
+				tz = getenv("TZ");
+
 /*** TO BE DONE 7.0 END ***/
 
                setenv("TZ", "", 1);

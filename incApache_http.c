@@ -487,7 +487,7 @@ void manage_http_requests(int client_fd
 				break;
 			case METHOD_NOT_CHANGED :
 				debug("    ... file %s not modified\n", filename);
-				//free(stat_p);
+				free(stat_p);
 				SEND_RESPONSE(client_fd, RESPONSE_CODE_NOT_MODIFIED, UIDcookie, /*** Not Modified, without body ***/
 #ifdef INCaPACHE_7_1
 					      is_http1_0, connection_no, thread_idx,
