@@ -77,15 +77,20 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	 *** no_free_threads, no_response_threads[conn_no], and
 	 *** connection_no[i] ***/
 /*** TO BE DONE 7.1 START ***/
-	for(i = 0; i < MAX_THREADS; ++i){
-		if(connection_no[i] == conn_no)
-			break;
+	    if(pthread_mutex_lock(&threads_mutex))
+			fail_errno("Could not lock threads_mutex");
+
+		i = to_join[conn_no] - thread_ids;
+
 		if(pthread_join(thread_ids[i], NULL))
 			fail_errno("Could not join thread");
+
 		--no_response_threads[conn_no];
 		++no_free_threads;
 		connection_no[i] = FREE_SLOT;
-	}
+
+		if(pthread_mutex_unlock(&threads_mutex))
+			fail_errno("Could not unlock threads_mutex");
 /*** TO BE DONE 7.1 END ***/
 
     }
@@ -104,7 +109,22 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	 *** avoiding race conditions ***/
 /*** TO BE DONE 7.1 START ***/
 
+	if(pthread_mutex_lock(&threads_mutex))
+		fail_errno("Could not lock threads_mutex");
 
+	if(to_join[thrd_no]){
+		i = to_join[thrd_no] - thread_ids;
+		if(pthread_join(thread_ids[i], NULL))
+			fail_errno("Could not join thread");
+		conn_no = connection_no[thrd_no];
+		no_response_threads[conn_no]--;
+		no_free_threads++;
+		connection_no[thrd_no] = FREE_SLOT;
+		to_join[thrd_no] = NULL;
+	}
+
+	if(pthread_mutex_unlock(&threads_mutex))
+		fail_errno("Could not unlock threads_mutex");
 /*** TO BE DONE 7.1 END ***/
 
     }
@@ -148,8 +168,7 @@ void *client_connection_thread(void *vp)
 
 	/*** properly initialize the thread queue to_join ***/
 /*** TO BE DONE 7.1 START ***/
-
-
+	to_join[connection_no] = NULL;
 /*** TO BE DONE 7.1 END ***/
 
 	pthread_mutex_unlock(&threads_mutex);
@@ -188,9 +207,9 @@ char *get_mime_type(char *filename)
 
 	/*** What is missing here to avoid races conditions ? ***/
 /*** TO BE DONE 7.0 START ***/
-	pthread_mutex_lock(&mime_mutex);
+	if(pthread_mutex_lock(&mime_mutex))
+		fail_errno("Could not lock mime_mutex");
 	debug("      ... get_mime_type(%s): locked mime_mutex\n", filename);
-
 /*** TO BE DONE 7.0 END ***/
 
 	fprintf(mime_request_stream, "%s\n", filename);
@@ -201,7 +220,8 @@ char *get_mime_type(char *filename)
 
 	/*** What is missing here to avoid race conditions ? ***/
 /*** TO BE DONE 7.0 START ***/
-	pthread_mutex_unlock(&mime_mutex);
+	if(pthread_mutex_unlock(&mime_mutex))
+		fail_errno("Could not unlock mime_mutex");
 	debug("      ... get_mime_type(%s): unlocked mime_mutex\n", filename);
 
 
@@ -233,8 +253,8 @@ void send_resp_thread(int out_socket, int response_code, int cookie,
 
 	/*** enqueue the current thread in the "to_join" data structure ***/
 /*** TO BE DONE 7.1 START ***/
-
-
+	to_join[new_thread_idx] = to_join[connection_idx];
+	to_join[connection_idx] = &thread_ids[new_thread_idx];
 /*** TO BE DONE 7.1 END ***/
 
 	if (pthread_create(thread_ids + new_thread_idx, NULL, response_thread, connection_no + new_thread_idx))
