@@ -76,22 +76,37 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	 *** call pthread_join() on thread_ids[i], and update shared variables
 	 *** no_free_threads, no_response_threads[conn_no], and
 	 *** connection_no[i] ***/
-/*** TO BE DONE 7.1 START ***/
-	    if(pthread_mutex_lock(&threads_mutex))
-			fail_errno("Could not lock threads_mutex");
+	/*** TO BE DONE 7.1 START ***/
+
+		if(pthread_mutex_lock(&threads_mutex)) 
+			fail("pthread_mutex_lock");
+
+		if(!to_join[conn_no]) {
+			if(pthread_mutex_unlock(&threads_mutex)) 
+				fail("pthread_mutex_unlock");
+			return;
+		}
 
 		i = to_join[conn_no] - thread_ids;
+		pthread_t thrd_to_join = *to_join[conn_no];
+		to_join[conn_no] = NULL;
+		if(pthread_mutex_unlock(&threads_mutex)) 
+			fail("pthread_mutex_unlock");
 
-		if(pthread_join(thread_ids[i], NULL))
-			fail_errno("Could not join thread");
+		if(pthread_join(thrd_to_join, NULL))
+			fail("pthread_join all threads");
 
-		--no_response_threads[conn_no];
-		++no_free_threads;
+		if(pthread_mutex_lock(&threads_mutex))
+			fail("pthread_mutex_lock");
+
+		no_response_threads[conn_no]--;
+		if(no_response_threads[conn_no] > 0)
+			no_free_threads++;
 		connection_no[i] = FREE_SLOT;
 
-		if(pthread_mutex_unlock(&threads_mutex))
-			fail_errno("Could not unlock threads_mutex");
-/*** TO BE DONE 7.1 END ***/
+		if(pthread_mutex_unlock(&threads_mutex)) fail("pthread_mutex_unlock");
+			
+	/*** TO BE DONE 7.1 END ***/
 
     }
 
@@ -107,25 +122,38 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	 *** wait for its termination, and update the shared variables
 	 *** no_free_threads, no_response_threads[conn_no], and connection_no[i],
 	 *** avoiding race conditions ***/
-/*** TO BE DONE 7.1 START ***/
+	/*** TO BE DONE 7.1 START ***/
 
 	if(pthread_mutex_lock(&threads_mutex))
-		fail_errno("Could not lock threads_mutex");
-
-	if(to_join[thrd_no]){
-		i = to_join[thrd_no] - thread_ids;
-		if(pthread_join(thread_ids[i], NULL))
-			fail_errno("Could not join thread");
-		conn_no = connection_no[thrd_no];
-		no_response_threads[conn_no]--;
-		no_free_threads++;
-		connection_no[thrd_no] = FREE_SLOT;
-		to_join[thrd_no] = NULL;
+		fail("pthread_mutex_lock");
+	if(!to_join[thrd_no]) {
+		if(pthread_mutex_unlock(&threads_mutex))
+			fail("pthread_mutex_unlock");
+		return;
 	}
 
+	conn_no = connection_no[thrd_no];
+	i = to_join[thrd_no] - thread_ids;
+	pthread_t thrd_to_join = *to_join[thrd_no];
+
 	if(pthread_mutex_unlock(&threads_mutex))
-		fail_errno("Could not unlock threads_mutex");
-/*** TO BE DONE 7.1 END ***/
+		fail("pthread_mutex_unlock");
+
+	if(pthread_join(thrd_to_join, NULL))
+		fail("pthread_join prev thread");
+
+	if(pthread_mutex_lock(&threads_mutex))
+		fail("pthread_mutex_lock");
+
+	no_response_threads[conn_no]--;
+	if(no_response_threads[conn_no] > 0)
+		no_free_threads++;
+	connection_no[i] = FREE_SLOT;
+	to_join[thrd_no] = NULL;
+
+	if(pthread_mutex_unlock(&threads_mutex))
+		fail("pthread_mutex_unlock");
+	/*** TO BE DONE 7.1 END ***/
 
     }
 
