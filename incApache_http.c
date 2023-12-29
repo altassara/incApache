@@ -214,7 +214,6 @@ void send_response(int client_fd, int response_code, int cookie,
             /*** set permanent cookie in order to identify this client ***/
 /*** TO BE DONE 7.0 START ***/
 
-			//ask probabilmente si puo rendere un po più corto
 			char* cookie_str = my_malloc(sizeof(char) * 100);
 			sprintf(cookie_str, "\r\nSet-Cookie: UID=%d%s", cookie, COOKIE_EXPIRE);
 			strcat(http_header, cookie_str);
@@ -330,7 +329,6 @@ void manage_http_requests(int client_fd
 		 *** filename, and protocol ***/
 /*** TO BE DONE 7.0 START ***/
 
-		//ask prof chiolas if we need to add an if to check if it is the first line
 		method_str = strtok_r(http_request_line, " ", &strtokr_save);
 		filename = strtok_r(NULL, " ", &strtokr_save);
 		protocol = strtok_r(NULL, "\r\n", &strtokr_save);
@@ -373,14 +371,6 @@ void manage_http_requests(int client_fd
                                 /*** parse the cookie in order to get the UserID and count the number of requests coming from this client ***/
 /*** TO BE DONE 7.0 START ***/
 
-				//ask chiolas if there could be an error here (probably not) 
-				
-				/*debug("cookie_strPrima: %s\n", strtokr_save);
-				char* cookie_str = strtok_r(NULL, "UserID=", &strtokr_save);
-				if(cookie_str != NULL) {
-					debug("cookie_str: %s\n", cookie_str);
-					UIDcookie = atoi(cookie_str);
-				}*/
 				option_val = strtok_r(NULL, "=", &strtokr_save);
 				if (!strcmp(option_val, " UID")) {
 					char* aux;
