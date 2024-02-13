@@ -49,7 +49,7 @@ int get_new_UID(void)
 /*** TO BE DONE 7.0 START ***/
 	if(pthread_mutex_lock(&cookie_mutex))
 		fail_errno("incApache: could not lock cookie_mutex");
-	retval = (CurUID + 1) % MAX_COOKIES;
+	retval += CurUID % MAX_COOKIES;
 	UserTracker[retval] = 0;
 	if(pthread_mutex_unlock(&cookie_mutex))
 		fail_errno("incApache: could not unlock cookie_mutex");
@@ -372,12 +372,14 @@ void manage_http_requests(int client_fd
 /*** TO BE DONE 7.0 START ***/
 
 				option_val = strtok_r(NULL, "=", &strtokr_save);
-				if (!strcmp(option_val, " UID")) {
+				if (option_val != NULL && !strcmp(option_val, " UID")) {
 					char* aux;
 					option_val = strtok_r(NULL, "\r\n", &strtokr_save);
-					UIDcookie = strtol(option_val, &aux, 10);
-					if(aux == option_val || UIDcookie < 0 || UIDcookie > MAX_COOKIES - 1)
-						UIDcookie = -1;
+					if (option_val != NULL) {
+						UIDcookie = strtol(option_val, &aux, 10);
+						if(aux == option_val || UIDcookie < 0 || UIDcookie > MAX_COOKIES - 1)
+							UIDcookie = -1;
+					}
 				}
 
 
