@@ -21,7 +21,7 @@
 #define DEBUG
 ***/
 
-#define COOKIE_EXPIRE "; Expires=Wed, 31 Dec 2023 23:59:59 GMT"
+#define COOKIE_EXPIRE "; Expires=Tue, 31 Dec 2024 23:59:59 GMT"
 
 #include "incApache.h"
 
@@ -49,7 +49,8 @@ int get_new_UID(void)
 /*** TO BE DONE 7.0 START ***/
 	if(pthread_mutex_lock(&cookie_mutex))
 		fail_errno("incApache: could not lock cookie_mutex");
-	retval += CurUID % MAX_COOKIES;
+	CurUID++;
+	retval = CurUID % MAX_COOKIES;
 	UserTracker[retval] = 0;
 	if(pthread_mutex_unlock(&cookie_mutex))
 		fail_errno("incApache: could not unlock cookie_mutex");
@@ -269,8 +270,12 @@ void send_response(int client_fd, int response_code, int cookie,
 
 		/*** send fd file on client_fd, then close fd; see syscall sendfile  ***/
 /*** TO BE DONE 7.0 START ***/
-		if(sendfile(client_fd, fd, NULL, file_size) == -1)
-			fail_errno("incApache: could not send file");
+		for(int bytes_sent = 0; bytes_sent < file_size;){
+			ssize_t sent = sendfile(client_fd, fd, NULL, file_size - bytes_sent);
+			if(sent < 0)
+				fail_errno("incApache: could not send file");
+			bytes_sent += sent;
+		}
 		close(fd);
 /*** TO BE DONE 7.0 END ***/
 
@@ -372,14 +377,12 @@ void manage_http_requests(int client_fd
 /*** TO BE DONE 7.0 START ***/
 
 				option_val = strtok_r(NULL, "=", &strtokr_save);
-				if (option_val != NULL && !strcmp(option_val, " UID")) {
+				if (!strcmp(option_val, " UID")) {
 					char* aux;
 					option_val = strtok_r(NULL, "\r\n", &strtokr_save);
-					if (option_val != NULL) {
-						UIDcookie = strtol(option_val, &aux, 10);
-						if(aux == option_val || UIDcookie < 0 || UIDcookie > MAX_COOKIES - 1)
-							UIDcookie = -1;
-					}
+					UIDcookie = strtol(option_val, &aux, 10);
+					if(aux == option_val || UIDcookie < 0 || UIDcookie > MAX_COOKIES - 1)
+						UIDcookie = -1;
 				}
 
 
@@ -395,9 +398,10 @@ void manage_http_requests(int client_fd
 /*** TO BE DONE 7.0 START ***/
 					if(strcmp(option_name, "If-Modified-Since") == 0) {
 						char* date_str = strtok_r(NULL, "\r\n", &strtokr_save);
-						strptime(date_str, " %a, %d %b %Y %T GMT", &since_tm);
-						if(since_tm.tm_year != 0){
-							http_method |= METHOD_CONDITIONAL;
+						if(date_str != NULL){
+							if(strptime(date_str, " %a, %d %b %Y %T GMT", &since_tm) != NULL){
+								http_method |= METHOD_CONDITIONAL;
+							}
 						}
 					}
 
