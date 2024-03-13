@@ -49,7 +49,7 @@ int get_new_UID(void)
 /*** TO BE DONE 7.0 START ***/
 	if(pthread_mutex_lock(&cookie_mutex))
 		fail_errno("incApache: could not lock cookie_mutex");
-	CurUID++;
+	CurUID++; //si rompe se troppo grosso
 	retval = CurUID % MAX_COOKIES;
 	UserTracker[retval] = 0;
 	if(pthread_mutex_unlock(&cookie_mutex))
@@ -271,7 +271,7 @@ void send_response(int client_fd, int response_code, int cookie,
 		/*** send fd file on client_fd, then close fd; see syscall sendfile  ***/
 /*** TO BE DONE 7.0 START ***/
 		for(int bytes_sent = 0; bytes_sent < file_size;){
-			ssize_t sent = sendfile(client_fd, fd, NULL, file_size - bytes_sent);
+			ssize_t sent = sendfile(client_fd, fd, NULL, file_size - bytes_sent); // manca il puntatore per offset del file
 			if(sent < 0)
 				fail_errno("incApache: could not send file");
 			bytes_sent += sent;
@@ -376,7 +376,7 @@ void manage_http_requests(int client_fd
                                 /*** parse the cookie in order to get the UserID and count the number of requests coming from this client ***/
 /*** TO BE DONE 7.0 START ***/
 
-				option_val = strtok_r(NULL, "=", &strtokr_save);
+				option_val = strtok_r(NULL, "=", &strtokr_save); //se il client manda male restituisce null comme in If-Modified-Since
 				if (!strcmp(option_val, " UID")) {
 					char* aux;
 					option_val = strtok_r(NULL, "\r\n", &strtokr_save);
